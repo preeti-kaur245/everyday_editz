@@ -1,0 +1,6 @@
+{
+  "name": "EVERYDAY_EDITZ",
+  "description": "Little Finds. Big Everyday Upgrades. Curated lifestyle discovery & e-commerce platform for modern living in India.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
