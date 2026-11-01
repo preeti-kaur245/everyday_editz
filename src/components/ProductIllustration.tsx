@@ -2,15 +2,34 @@ import React from 'react';
 
 interface ProductIllustrationProps {
   productId: string;
+  imageUrl?: string;
   variantColor?: string;
   className?: string;
 }
 
 export const ProductIllustration: React.FC<ProductIllustrationProps> = ({
   productId,
+  imageUrl,
   variantColor,
   className = 'w-full h-full',
 }) => {
+  const [imgError, setImgError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [imageUrl]);
+
+  if (imageUrl && !imgError) {
+    return (
+      <img
+        src={imageUrl}
+        alt="Product preview"
+        className={`object-cover object-center ${className}`}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
   const getColor = (defaultHex: string) => variantColor || defaultHex;
 
   // Render high-fidelity departmental product graphics

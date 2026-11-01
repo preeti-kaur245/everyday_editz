@@ -277,7 +277,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = localStorage.getItem('edz_products_v4');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === INITIAL_PRODUCTS.length) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
       }
@@ -583,7 +583,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // LocalStorage Persistence
   useEffect(() => {
-    localStorage.setItem('edz_products_v4', JSON.stringify(products));
+    try {
+      localStorage.setItem('edz_products_v4', JSON.stringify(products));
+    } catch (e) {
+      console.warn('Unable to persist products to localStorage:', e);
+    }
   }, [products]);
 
   useEffect(() => {
@@ -1732,6 +1736,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return p;
       })
     );
+    setSelectedProduct((curr) => (curr && curr.id === id ? { ...curr, ...updates } : curr));
     showToast('Product updated successfully');
   };
 

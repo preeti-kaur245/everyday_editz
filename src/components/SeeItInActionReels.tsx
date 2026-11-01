@@ -151,7 +151,7 @@ export const SeeItInActionReels: React.FC = () => {
 
             {/* Product vector demonstration */}
             <div className="relative w-72 h-72 flex items-center justify-center">
-              <ProductIllustration productId={currentProduct.id} className="w-full h-full scale-110 drop-shadow-2xl" />
+              <ProductIllustration productId={currentProduct.id} imageUrl={currentProduct.images?.[0]} className="w-full h-full scale-110 drop-shadow-2xl" />
             </div>
 
             {/* Play/Pause Watermark when paused */}
@@ -228,7 +228,7 @@ export const SeeItInActionReels: React.FC = () => {
               className="flex items-center space-x-3 cursor-pointer flex-1 mr-2"
             >
               <div className="w-12 h-12 rounded-xl bg-white/10 overflow-hidden shrink-0 flex items-center justify-center">
-                <ProductIllustration productId={currentProduct.id} className="w-full h-full scale-75" />
+                <ProductIllustration productId={currentProduct.id} imageUrl={currentProduct.images?.[0]} className="w-full h-full scale-75" />
               </div>
               <div className="min-w-0">
                 <h4 className="text-white text-xs font-semibold truncate">

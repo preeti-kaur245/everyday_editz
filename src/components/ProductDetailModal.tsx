@@ -45,6 +45,8 @@ export const ProductDetailModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'editorial' | 'specs' | 'how-to' | 'reviews'>('editorial');
   const [pincodeQuery, setPincodeQuery] = useState('');
   const [pincodeResult, setPincodeResult] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [imgErrorMap, setImgErrorMap] = useState<Record<number, boolean>>({});
 
   // New review form state
   const [newReviewAuthor, setNewReviewAuthor] = useState('');
@@ -57,6 +59,16 @@ export const ProductDetailModal: React.FC = () => {
 
   const product = selectedProduct;
   const isFavorited = isInWishlist(product.id);
+
+  // Gallery and active image state
+  const imagesList = product.images && product.images.length > 0 ? product.images : [];
+  const currentImage = imagesList[activeImageIndex] || imagesList[0];
+  const isCurrentImageErrored = Boolean(imgErrorMap[activeImageIndex]);
+
+  React.useEffect(() => {
+    setActiveImageIndex(0);
+    setImgErrorMap({});
+  }, [product.id]);
 
   // Set default variant if unselected
   const currentVariant = selectedVariant || (product.variants && product.variants[0]?.options[0]?.label);
@@ -163,20 +175,62 @@ export const ProductDetailModal: React.FC = () => {
             
             {/* Left 6-cols: Visual Showcase Gallery */}
             <div className="lg:col-span-6 flex flex-col space-y-4">
-              <div className="w-full aspect-4/3 rounded-2xl bg-white border border-black/8 shadow-sm overflow-hidden relative">
-                <ProductIllustration 
-                  productId={product.id} 
-                  variantColor={selectedColorHex}
-                  className="w-full h-full"
-                />
+              <div className="w-full aspect-4/3 rounded-2xl bg-white border border-black/8 shadow-sm overflow-hidden relative group">
+                {currentImage && !isCurrentImageErrored ? (
+                  <img
+                    src={currentImage}
+                    alt={product.name}
+                    className="w-full h-full object-cover object-center"
+                    onError={() => setImgErrorMap(prev => ({ ...prev, [activeImageIndex]: true }))}
+                  />
+                ) : (
+                  <ProductIllustration 
+                    productId={product.id} 
+                    variantColor={selectedColorHex}
+                    className="w-full h-full"
+                  />
+                )}
 
                 {/* Discount Badge */}
                 {product.discountPercent > 0 && (
-                  <span className="absolute top-4 left-4 bg-[#242424] text-[#F7F5F0] text-xs font-mono font-semibold px-2.5 py-1 rounded">
+                  <span className="absolute top-4 left-4 bg-[#242424] text-[#F7F5F0] text-xs font-mono font-semibold px-2.5 py-1 rounded shadow-xs">
                     SAVE {product.discountPercent}%
                   </span>
                 )}
+
+                {/* Multiple image counter pill */}
+                {imagesList.length > 1 && (
+                  <span className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-xs text-white text-[10px] font-mono px-2 py-0.5 rounded">
+                    {activeImageIndex + 1} / {imagesList.length}
+                  </span>
+                )}
               </div>
+
+              {/* Multiple Uploaded Photos Thumbnails Gallery */}
+              {imagesList.length > 1 && (
+                <div className="flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+                  {imagesList.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                        activeImageIndex === idx 
+                          ? 'border-[#242424] ring-2 ring-[#242424]/20 shadow-sm' 
+                          : 'border-black/10 hover:border-black/30 opacity-70 hover:opacity-100'
+                      }`}
+                      title={`View image ${idx + 1}`}
+                    >
+                      <img src={imgUrl} alt={`${product.name} photo ${idx + 1}`} className="w-full h-full object-cover" />
+                      {idx === 0 && (
+                        <span className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[8px] font-mono text-center py-0.5">
+                          COVER
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Verified Trust Strip */}
               <div className="grid grid-cols-3 gap-2 text-center text-xs text-[#242424]/80 py-3 bg-white rounded-xl border border-black/8">

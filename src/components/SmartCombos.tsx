@@ -64,7 +64,7 @@ export const SmartCombos: React.FC = () => {
                         title={item.name}
                       >
                         <div className="w-full aspect-square rounded-lg bg-white overflow-hidden mb-2 relative">
-                          <ProductIllustration productId={item.id} className="w-full h-full scale-90" />
+                          <ProductIllustration productId={item.id} imageUrl={item.images?.[0]} className="w-full h-full scale-90" />
                         </div>
                         <span className="text-[11px] font-medium text-[#242424] line-clamp-1 group-hover/item:underline">
                           {item.name}

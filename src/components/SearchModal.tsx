@@ -125,7 +125,7 @@ export const SearchModal: React.FC = () => {
                     >
                       <div className="flex items-center space-x-3.5 min-w-0">
                         <div className="w-12 h-12 rounded-lg bg-[#F7F5F0] overflow-hidden shrink-0">
-                          <ProductIllustration productId={product.id} className="w-full h-full scale-75" />
+                          <ProductIllustration productId={product.id} imageUrl={product.images?.[0]} className="w-full h-full scale-75" />
                         </div>
                         <div className="min-w-0">
                           <h4 className="text-xs font-semibold text-[#242424] truncate group-hover:text-black">

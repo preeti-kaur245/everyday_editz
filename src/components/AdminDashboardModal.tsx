@@ -352,41 +352,75 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
     setProdForm((prev) => ({
       ...prev,
-      images: [...prev.images, imageInputUrl.trim()],
+      images: [imageInputUrl.trim(), ...prev.images.filter((img) => !img.startsWith('/products/'))],
     }));
     setImageInputUrl('');
-    showToast('Image added to product gallery');
+    showToast('Image added to product gallery and set as cover!');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('Image size exceeds 2MB limit', 'warning');
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Image file exceeds 10MB limit', 'warning');
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl) {
-        setProdForm((prev) => ({
-          ...prev,
-          images: [dataUrl, ...prev.images],
-        }));
-        showToast('Image uploaded and set as cover!');
-      }
+      const rawDataUrl = event.target?.result as string;
+      if (!rawDataUrl) return;
+
+      // Optimize and compress raw image on a canvas to ~60KB to prevent localStorage quota exhaustion
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setProdForm((prev) => ({
+            ...prev,
+            images: [compressedDataUrl, ...prev.images.filter((img) => !img.startsWith('/products/'))],
+          }));
+          showToast('Image uploaded, optimized, and set as cover!');
+        } else {
+          setProdForm((prev) => ({
+            ...prev,
+            images: [rawDataUrl, ...prev.images.filter((img) => !img.startsWith('/products/'))],
+          }));
+          showToast('Image uploaded and set as cover!');
+        }
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleAddPresetImage = (url: string) => {
     setProdForm((prev) => ({
       ...prev,
-      images: prev.images.includes(url) ? prev.images : [...prev.images, url],
+      images: [url, ...prev.images.filter((img) => img !== url && !img.startsWith('/products/'))],
     }));
-    showToast('Studio image preset selected');
+    showToast('Studio image preset selected as cover');
   };
 
   const handleSetPrimaryImage = (index: number) => {
@@ -2653,19 +2687,23 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 {products.map((prod) => (
                   <div key={prod.id} className="bg-white p-4 rounded-2xl border border-black/8 flex flex-col justify-between shadow-xs">
                     <div>
-                      {/* Thumbnail & Badges */}
+                      {/* Thumbnail & Badges with Fallback */}
                       <div className="h-36 rounded-xl bg-[#FAF8F5] overflow-hidden relative mb-3 border border-black/6">
                         {prod.images && prod.images[0] ? (
                           <img
                             src={prod.images[0]}
                             alt={prod.name}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // If image fails, hide it and reveal illustration behind
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
                           />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-black/30 font-mono text-xs">
-                            No Image Set
-                          </div>
-                        )}
+                        ) : null}
+                        <ProductIllustration 
+                          productId={prod.id} 
+                          className="w-full h-full -z-1 absolute inset-0" 
+                        />
                         <div className="absolute top-2 left-2 flex flex-wrap gap-1">
                           {prod.departments?.map((d) => (
                             <span key={d} className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#242424] text-white capitalize">
@@ -2674,12 +2712,22 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           ))}
                         </div>
                         <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-xs">
-                          {prod.images?.length || 1} {prod.images?.length === 1 ? 'image' : 'images'}
+                          {prod.images?.length || 1} {prod.images?.length === 1 ? 'photo' : 'photos'}
                         </div>
                       </div>
 
                       <div className="text-xs font-bold text-[#242424] line-clamp-1">{prod.name}</div>
                       <p className="text-[11px] text-black/50 line-clamp-1 mt-0.5">{prod.tagline}</p>
+
+                      {/* Product Description Preview */}
+                      <div className="mt-2.5 p-2 bg-[#FAF8F5] rounded-xl border border-black/5 text-[11px] text-[#242424]/80">
+                        <div className="font-semibold text-[#536B57] text-[10px] uppercase font-mono tracking-wider mb-0.5">
+                          Product Description:
+                        </div>
+                        <p className="line-clamp-2 leading-relaxed">
+                          {prod.editorial?.problemItSolves || prod.editorial?.everydayEdit || prod.tagline}
+                        </p>
+                      </div>
 
                       <div className="mt-3 flex items-center justify-between text-xs font-mono">
                         <div>
@@ -2693,6 +2741,15 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <div className="pt-3 border-t border-black/6 mt-3 flex items-center justify-between">
                       <span className="text-[10px] font-mono text-black/40">{prod.id}</span>
                       <div className="flex items-center space-x-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProduct(prod)}
+                          className="px-2 py-1 bg-white border border-black/15 hover:border-black text-[#242424] rounded-lg text-xs font-semibold transition-colors flex items-center space-x-1 cursor-pointer"
+                          title="Preview product with photos and full description"
+                        >
+                          <Eye className="w-3 h-3 text-[#536B57]" />
+                          <span>Preview</span>
+                        </button>
                         <button
                           onClick={() => handleOpenEditProduct(prod)}
                           className="px-2.5 py-1 bg-[#F7F5F0] hover:bg-[#242424] hover:text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
@@ -3240,6 +3297,174 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     onChange={(e) => setProdForm({ ...prodForm, ageSuitability: e.target.value })}
                     className="w-full text-xs px-3.5 py-2.5 bg-[#F7F5F0] rounded-xl border border-black/10"
                   />
+                </div>
+              </div>
+
+              {/* Product Detailed Editorial & Problem Solved */}
+              <div className="space-y-3 pt-2 border-t border-black/8">
+                <div>
+                  <label className="block text-xs font-semibold text-[#242424] mb-1">
+                    Product Description / The Everyday Edit Story *
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Describe what makes this product essential, its materials, feel, and daily convenience..."
+                    value={prodForm.everydayEdit}
+                    onChange={(e) => setProdForm({ ...prodForm, everydayEdit: e.target.value })}
+                    className="w-full text-xs px-3.5 py-2.5 bg-[#F7F5F0] rounded-xl border border-black/10 focus:outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#242424] mb-1">
+                    The Problem It Solves *
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Eliminates tangled cables, protects fragile items, prevents daily clutter..."
+                    value={prodForm.problemItSolves}
+                    onChange={(e) => setProdForm({ ...prodForm, problemItSolves: e.target.value })}
+                    className="w-full text-xs px-3.5 py-2.5 bg-[#F7F5F0] rounded-xl border border-black/10 focus:outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#242424] mb-1">
+                    Shipping, Delivery & Returns Guarantee
+                  </label>
+                  <input
+                    type="text"
+                    value={prodForm.shippingAndReturns}
+                    onChange={(e) => setProdForm({ ...prodForm, shippingAndReturns: e.target.value })}
+                    className="w-full text-xs px-3.5 py-2.5 bg-[#F7F5F0] rounded-xl border border-black/10"
+                  />
+                </div>
+              </div>
+
+              {/* LIVE PRODUCT PREVIEW WITH PRODUCT DESCRIPTION */}
+              <div className="bg-gradient-to-br from-[#FAF8F5] to-[#F2EFE9] p-4 sm:p-5 rounded-2xl border border-black/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Eye className="w-4 h-4 text-[#536B57]" />
+                    <span className="text-xs font-bold text-[#242424] uppercase tracking-wider">
+                      Live Preview: Image & Product Description
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-[#536B57]/10 text-[#536B57] px-2 py-0.5 rounded-full flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#536B57] animate-pulse" />
+                    <span>Real-time Preview</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-white p-4 rounded-xl border border-black/8 shadow-xs">
+                  {/* Left: Image Showcase */}
+                  <div className="md:col-span-5 flex flex-col space-y-2">
+                    <div className="relative aspect-4/3 w-full rounded-xl overflow-hidden bg-[#F7F5F0] border border-black/8 flex items-center justify-center">
+                      {prodForm.images && prodForm.images[0] ? (
+                        <img
+                          src={prodForm.images[0]}
+                          alt={prodForm.name || 'Preview'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-xs text-black/40 font-mono">No Image Uploaded</div>
+                      )}
+
+                      {/* Live Badges */}
+                      <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+                        {prodForm.isBestSeller && (
+                          <span className="text-[9px] font-mono font-bold text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded">
+                            BEST SELLER
+                          </span>
+                        )}
+                        {prodForm.isNewArrival && (
+                          <span className="text-[9px] font-mono font-bold text-emerald-900 bg-emerald-100/90 px-1.5 py-0.5 rounded">
+                            NEW
+                          </span>
+                        )}
+                        {prodForm.isTrending && (
+                          <span className="text-[9px] font-mono font-bold text-[#242424] bg-[#D9A6A0]/90 px-1.5 py-0.5 rounded">
+                            TRENDING
+                          </span>
+                        )}
+                      </div>
+
+                      {prodForm.images.length > 1 && (
+                        <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[9px] font-mono px-1.5 py-0.5 rounded">
+                          {prodForm.images.length} photos
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Thumbnail strip if multiple photos */}
+                    {prodForm.images.length > 1 && (
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+                        {prodForm.images.map((img, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => handleSetPrimaryImage(i)}
+                            className="w-10 h-10 rounded-lg overflow-hidden border border-black/15 shrink-0 hover:opacity-80 cursor-pointer"
+                            title="Click to make cover"
+                          >
+                            <img src={img} alt={`Preview ${i}`} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: Description & Meta */}
+                  <div className="md:col-span-7 flex flex-col justify-between space-y-2.5">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-[10px] font-mono text-black/50 uppercase">
+                        <span>{prodForm.departments?.[0] || 'Everyday Edit'}</span>
+                        <span>·</span>
+                        <span className="text-amber-500 font-bold">★ 4.8</span>
+                        {prodForm.ageSuitability && (
+                          <>
+                            <span>·</span>
+                            <span className="text-[#536B57]">{prodForm.ageSuitability}</span>
+                          </>
+                        )}
+                      </div>
+
+                      <h4 className="text-sm font-bold text-[#242424] mt-0.5">
+                        {prodForm.name || 'Your Product Title'}
+                      </h4>
+
+                      <p className="text-xs text-[#242424]/70 mt-0.5 font-medium">
+                        {prodForm.tagline || 'Short summary tagline will appear here.'}
+                      </p>
+
+                      <div className="mt-2 flex items-baseline space-x-2">
+                        <span className="text-base font-bold font-mono text-[#242424]">₹{prodForm.price || 0}</span>
+                        {prodForm.originalPrice > prodForm.price && (
+                          <del className="text-xs text-black/40 font-mono">₹{prodForm.originalPrice}</del>
+                        )}
+                        {prodForm.originalPrice > prodForm.price && (
+                          <span className="text-[10px] font-mono font-semibold text-[#536B57] bg-[#536B57]/10 px-1.5 py-0.5 rounded">
+                            {Math.round(((prodForm.originalPrice - prodForm.price) / prodForm.originalPrice) * 100)}% OFF
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detailed Product Description Box */}
+                    <div className="bg-[#F7F5F0] p-3 rounded-xl border border-black/5 text-xs space-y-1.5">
+                      <div className="font-bold text-[#536B57] text-[10px] uppercase font-mono tracking-wider">
+                        Product Description:
+                      </div>
+                      <p className="text-[11px] text-[#242424]/85 leading-relaxed">
+                        {prodForm.everydayEdit || 'Enter a product description above to preview it here.'}
+                      </p>
+                      {prodForm.problemItSolves && (
+                        <div className="text-[10px] text-[#242424]/75 pt-1.5 border-t border-black/5">
+                          <strong>Problem Solved:</strong> {prodForm.problemItSolves}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 

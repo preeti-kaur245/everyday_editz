@@ -135,7 +135,7 @@ export const CartDrawer: React.FC = () => {
               >
                 {/* Product thumbnail */}
                 <div className="w-16 h-16 rounded-lg bg-[#F7F5F0] overflow-hidden shrink-0 border border-black/5">
-                  <ProductIllustration productId={item.product.id} className="w-full h-full scale-75" />
+                  <ProductIllustration productId={item.product.id} imageUrl={item.product.images?.[0]} className="w-full h-full scale-75" />
                 </div>
 
                 {/* Details */}

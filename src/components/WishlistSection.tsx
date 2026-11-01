@@ -42,7 +42,7 @@ export const WishlistSection: React.FC = () => {
                 onClick={() => setSelectedProduct(product)}
                 className="w-full aspect-4/3 bg-[#F2EFE9] overflow-hidden cursor-pointer relative"
               >
-                <ProductIllustration productId={product.id} className="w-full h-full" />
+                <ProductIllustration productId={product.id} imageUrl={product.images?.[0]} className="w-full h-full" />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

@@ -17,6 +17,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   } = useStore();
 
   const isFavorited = isInWishlist(product.id);
+  const [imgError, setImgError] = React.useState(false);
+  const coverImage = product.images && product.images.length > 0 ? product.images[0] : null;
+  const hasMultipleImages = Boolean(product.images && product.images.length > 1);
 
   return (
     <div className="group relative bg-white rounded-2xl border border-black/8 hover:border-black/15 transition-all duration-200 flex flex-col justify-between overflow-hidden hover:-translate-y-0.5 hover:shadow-md">
@@ -26,11 +29,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         onClick={() => setSelectedProduct(product)}
         className="relative w-full aspect-4/3 bg-[#F2EFE9] overflow-hidden cursor-pointer"
       >
-        {/* Product Vector Illustration */}
-        <ProductIllustration 
-          productId={product.id} 
-          className="w-full h-full transform group-hover:scale-105 transition-transform duration-300" 
-        />
+        {/* Product Image or Vector Illustration */}
+        {coverImage && !imgError ? (
+          <img
+            src={coverImage}
+            alt={product.name}
+            className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-500"
+            onError={() => setImgError(true)}
+            loading="lazy"
+          />
+        ) : (
+          <ProductIllustration 
+            productId={product.id} 
+            className="w-full h-full transform group-hover:scale-105 transition-transform duration-300" 
+          />
+        )}
+
+        {/* Multi-image indicator */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-2 left-2.5 bg-black/60 backdrop-blur-xs text-white text-[9px] font-mono px-1.5 py-0.5 rounded pointer-events-none flex items-center space-x-1">
+            <span>{product.images.length} photos</span>
+          </div>
+        )}
 
         {/* Top Badges / Indicators */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
@@ -122,10 +142,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {product.name}
           </h3>
 
-          {/* Short tagline */}
-          <p className="text-xs text-[#242424]/70 line-clamp-1 mt-1">
+          {/* Short tagline and description preview */}
+          <p className="text-xs text-[#242424]/75 line-clamp-1 mt-1 font-medium">
             {product.tagline}
           </p>
+          {product.editorial?.problemItSolves && (
+            <p className="text-[11px] text-[#242424]/60 line-clamp-2 mt-1 leading-snug">
+              {product.editorial.problemItSolves}
+            </p>
+          )}
         </div>
 
         {/* Price & Buy Action row */}
